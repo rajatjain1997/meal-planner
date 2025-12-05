@@ -5,7 +5,7 @@ import {
   saveSuggestedMealToLibrary, 
   saveAlreadyHadMealToLibrary
 } from "../utils/chatMeals";
-import { getTodayDateString, logMealForToday } from "../utils/storage";
+import { getTodayDateString, logMealForToday, loadTodayChatMessages, saveTodayChatMessages } from "../utils/storage";
 import { saveMealPlan, getMealPlan, getNextDayDateString } from "../utils/plans";
 
 export const ChatPage = () => {
@@ -17,6 +17,23 @@ export const ChatPage = () => {
   const [savedMeals, setSavedMeals] = useState<Set<string>>(new Set());
   const [addedToPlans, setAddedToPlans] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load today's chat messages on mount
+  useEffect(() => {
+    const savedMessages = loadTodayChatMessages();
+    if (savedMessages.length > 0) {
+      setMessages(savedMessages);
+      // Note: We don't restore registered/saved/added states perfectly,
+      // but the meals themselves are already saved in the log/library
+    }
+  }, []);
+
+  // Save messages whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveTodayChatMessages(messages);
+    }
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -43,7 +60,15 @@ export const ChatPage = () => {
     setError(null);
 
     try {
-      const response = await callChatGPTWithRetry(userMessage.content);
+      // Build conversation history from previous messages
+      const conversationHistory = messages
+        .filter((msg) => msg.role === "user" || msg.role === "assistant")
+        .map((msg) => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.role === "assistant" ? msg.content : msg.content,
+        }));
+
+      const response = await callChatGPTWithRetry(userMessage.content, conversationHistory);
       
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,

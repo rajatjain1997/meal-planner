@@ -1,4 +1,4 @@
-import type { DailyLog, LoggedMeal } from "../types";
+import type { DailyLog, LoggedMeal, ChatMessage } from "../types";
 import { getCurrentTimeString } from "./time";
 
 const STORAGE_KEY = "mealCreditsLogs";
@@ -128,5 +128,66 @@ export const logMealForToday = (
   };
 
   saveDailyLog(updatedLog);
+};
+
+// Chat message storage
+const CHAT_STORAGE_KEY = "chatMessages";
+
+export interface StoredChatMessages {
+  date: string;
+  messages: ChatMessage[];
+}
+
+/**
+ * Load today's chat messages
+ */
+export const loadTodayChatMessages = (): ChatMessage[] => {
+  try {
+    const today = getTodayDateString();
+    const data = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (!data) return [];
+    
+    const stored: StoredChatMessages[] = JSON.parse(data);
+    const todayChat = stored.find((chat) => chat.date === today);
+    return todayChat?.messages || [];
+  } catch {
+    console.error("Failed to load chat messages from localStorage");
+    return [];
+  }
+};
+
+/**
+ * Save today's chat messages
+ */
+export const saveTodayChatMessages = (messages: ChatMessage[]): void => {
+  try {
+    const today = getTodayDateString();
+    const data = localStorage.getItem(CHAT_STORAGE_KEY);
+    const stored: StoredChatMessages[] = data ? JSON.parse(data) : [];
+    
+    const existingIndex = stored.findIndex((chat) => chat.date === today);
+    const todayChat: StoredChatMessages = {
+      date: today,
+      messages,
+    };
+    
+    if (existingIndex >= 0) {
+      stored[existingIndex] = todayChat;
+    } else {
+      stored.push(todayChat);
+    }
+    
+    // Keep only last 30 days of chat history
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const filtered = stored.filter((chat) => {
+      const chatDate = new Date(chat.date);
+      return chatDate >= thirtyDaysAgo;
+    });
+    
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(filtered));
+  } catch {
+    console.error("Failed to save chat messages to localStorage");
+  }
 };
 

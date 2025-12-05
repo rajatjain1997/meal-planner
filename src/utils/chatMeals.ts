@@ -135,7 +135,7 @@ export const deleteChatMeal = (id: string): void => {
  */
 export const getMealLibraryForContext = (): string => {
   const allMeals = getCompleteMealLibrary();
-  // Include only relevant fields for context
+  // Include relevant fields for context - ingredients help with accurate matching
   const simplifiedMeals = allMeals.map((meal) => ({
     id: meal.id,
     name: meal.name,
@@ -144,6 +144,7 @@ export const getMealLibraryForContext = (): string => {
     calories: meal.calories,
     cuisines: meal.cuisines,
     tags: meal.tags,
+    ingredients: meal.ingredients.slice(0, 5), // Include first 5 ingredients for matching
   }));
   return JSON.stringify(simplifiedMeals, null, 2);
 };

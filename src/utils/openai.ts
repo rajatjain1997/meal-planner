@@ -31,9 +31,22 @@ const getTodaysMealsContext = (): string => {
   }
   
   const meals: string[] = [];
-  if (log.breakfastId) meals.push(`Breakfast: ${log.breakfastId}`);
-  if (log.lunchId) meals.push(`Lunch: ${log.lunchId}`);
-  if (log.dinnerId) meals.push(`Dinner: ${log.dinnerId}`);
+  if (log.breakfast && log.breakfast.length > 0) {
+    meals.push(`Breakfast: ${log.breakfast.length} meal(s) logged`);
+  }
+  if (log.lunch && log.lunch.length > 0) {
+    meals.push(`Lunch: ${log.lunch.length} meal(s) logged`);
+  }
+  if (log.dinner && log.dinner.length > 0) {
+    meals.push(`Dinner: ${log.dinner.length} meal(s) logged`);
+  }
+  
+  // Legacy support
+  if (meals.length === 0) {
+    if (log.breakfastId) meals.push(`Breakfast: logged`);
+    if (log.lunchId) meals.push(`Lunch: logged`);
+    if (log.dinnerId) meals.push(`Dinner: logged`);
+  }
   
   if (meals.length === 0) {
     return "No meals logged today yet.";
@@ -51,11 +64,27 @@ const buildSystemPrompt = (): string => {
   const todaysMeals = getTodaysMealsContext();
   
   return `You are a helpful vegetarian meal planning assistant for a family. Your job is to:
-1. Understand what meals the user has already eaten today
-2. Suggest balanced meals for the rest of the day or next day
+1. Understand what meals the user has already eaten today (or plans to eat)
+2. Suggest the NEXT meals they need - be contextual:
+   - If they mention breakfast → suggest lunch & dinner
+   - If they mention lunch → suggest dinner
+   - If they mention the whole day or it's late evening → suggest tomorrow's breakfast, lunch, AND dinner
+
+CONVERSATION CONTEXT:
+- You will receive previous messages in the conversation for context
+- Use this history to understand what the user has already told you
+- Build on previous suggestions and adapt recommendations based on follow-up questions
+- If the user asks to change something, update your suggestions accordingly
 
 MEAL LIBRARY (available meals with IDs):
 ${mealLibrary}
+
+IMPORTANT MATCHING GUIDELINES:
+- Each meal in the library has a unique name and specific ingredients
+- Only match if the user's meal description matches BOTH the name AND key ingredients
+- If the user describes a variation (e.g., "stuffed chilla" vs "plain chilla", "on toast" vs "with roti"), it's a DIFFERENT meal - create new
+- When creating new meals, use the EXACT name and description the user provided
+- Don't substitute similar items (chilla ≠ toast ≠ paratha) - they are different meals
 
 ${timeContext}
 ${todaysMeals}
@@ -100,30 +129,77 @@ You MUST respond with valid JSON only. No additional text outside the JSON.
       "description": "Why this meal balances the diet"
     }
   ]
+  NOTE: Number of suggestions varies (1-3) based on what meals are needed next
 }
 
 RULES:
-1. For "alreadyHad": Include ALL meals the user mentions they had. If a meal matches one in the library, use its mealId. If not, set mealId to null and isNew to true.
-2. For "suggestions": Provide EXACTLY 3 suggestions:
-   - 2 suggestions MUST be from the existing meal library (use their mealId)
-   - 1 suggestion should be a NEW meal not in the library (mealId: null, isNew: true)
+1. For "alreadyHad": Include ALL meals the user mentions they had.
+   - MATCHING CRITERIA: Only use a mealId from the library if the user's meal is CLEARLY and EXACTLY the same meal.
+   - If the user describes a meal that is similar but not identical (different ingredients, preparation, or name), set mealId to null and isNew to true.
+   - When in doubt, CREATE A NEW MEAL (mealId: null, isNew: true). It's better to create a new meal than to misidentify.
+   - Examples of MISMATCHES (should create new meal):
+     * User says "mixed-dal chilla" but library has "moong dal chilla" → CREATE NEW
+     * User says "paneer bhurji on toast" but library has "paneer bhurji with roti" → CREATE NEW
+     * User says "stuffed chilla" but library has "plain chilla" → CREATE NEW
+   - Only match if the meal name and key ingredients are EXACTLY the same.
+
+2. For "suggestions": Provide CONTEXTUAL suggestions based on what the user has told you:
+   
+   CONTEXTUAL SUGGESTION RULES:
+   - If user mentions ONLY breakfast → Suggest lunch AND dinner (2 suggestions total)
+   - If user mentions breakfast + lunch OR only lunch → Suggest dinner (1 suggestion)
+   - If user mentions the whole day OR it's late evening (after 8 PM) → Suggest tomorrow's breakfast, lunch, AND dinner (3 suggestions)
+   - If user mentions breakfast + lunch + dinner → Suggest tomorrow's breakfast, lunch, AND dinner (3 suggestions)
+   
+   SUGGESTION COMPOSITION:
+   - For each time slot you're suggesting, provide 1-2 options:
+     * At least 1 suggestion from the existing meal library (use mealId)
+     * Optionally 1 new meal suggestion (mealId: null, isNew: true) if you think a new meal would be helpful
+   - Total suggestions should match the number of meals needed (1-3 suggestions)
+   - For new meals, use the EXACT name and description that would be appropriate
+   - Consider nutritional balance when suggesting meals
+
 3. Consider nutritional balance when suggesting meals
-4. If it's late evening, suggest meals for tomorrow
+
+4. Time-based logic:
+   - Current time determines which meals are "next"
+   - Morning (before 11 AM): Next meals are lunch and dinner
+   - Afternoon (11 AM - 4 PM): Next meal is dinner
+   - Evening (after 4 PM): Next meals are tomorrow's breakfast, lunch, and dinner
+   - Late evening (after 8 PM): Always suggest tomorrow's full day (breakfast, lunch, dinner)
+
 5. Match meal types to appropriate times based on the current timestamp (breakfast in morning, etc.)
-6. Always include ingredients and steps for new meals
+
+6. Always include ingredients and steps for new meals - use the user's description to create accurate ingredients and steps
+
 7. For healthy meals: credits should be 1-3 based on nutritional value (3 = very healthy, high protein; 1 = less healthy)
+
 8. For unhealthy/cheat meals: 
    - Type MUST be "cheat"
    - Credits MUST be STRONGLY NEGATIVE and PUNITIVE (-5 to -15 or more)
    - The more unhealthy, the more negative (make it costly!)
-   - Examples: ice cream (-5), pizza (-8), burger (-10), deep fried items (-12), very unhealthy desserts (-15)`;
+   - Examples: ice cream (-5), pizza (-8), burger (-10), deep fried items (-12), very unhealthy desserts (-15)
+
+9. IMPORTANT: When creating new meals, preserve the user's exact wording and description. Don't change "chilla" to "toast" or "paratha" - use what the user said.`;
 };
 
 /**
  * Call the API (proxy in production, direct in development)
+ * @param userMessage - The current user message
+ * @param conversationHistory - Previous messages in the conversation (optional)
  */
-export const callChatGPT = async (userMessage: string): Promise<ChatResponse> => {
+export const callChatGPT = async (
+  userMessage: string,
+  conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = []
+): Promise<ChatResponse> => {
   const systemPrompt = buildSystemPrompt();
+  
+  // Build messages array with system prompt, conversation history, and current message
+  const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+    { role: "system", content: systemPrompt },
+    ...conversationHistory,
+    { role: "user", content: userMessage },
+  ];
   
   let response: Response;
   
@@ -144,10 +220,7 @@ export const callChatGPT = async (userMessage: string): Promise<ChatResponse> =>
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage },
-          ],
+          messages,
           temperature: 0.7,
           max_tokens: 2000,
         }),
@@ -164,10 +237,7 @@ export const callChatGPT = async (userMessage: string): Promise<ChatResponse> =>
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage },
-          ],
+          messages,
         }),
       });
     } catch (fetchError) {
@@ -230,13 +300,14 @@ export const callChatGPT = async (userMessage: string): Promise<ChatResponse> =>
  */
 export const callChatGPTWithRetry = async (
   userMessage: string,
+  conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
   maxRetries: number = 2
 ): Promise<ChatResponse> => {
   let lastError: Error | null = null;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await callChatGPT(userMessage);
+      return await callChatGPT(userMessage, conversationHistory);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       
