@@ -48,9 +48,12 @@ export const CheatMealsPage = () => {
   };
 
   const creditColor = (cost: number) => {
-    if (cost === 1) return "bg-emerald-100 text-emerald-700 border-emerald-200";
-    if (cost === 2) return "bg-amber-100 text-amber-700 border-amber-200";
-    return "bg-orange-100 text-orange-700 border-orange-200";
+    // More punitive = darker red
+    if (cost >= 10) return "bg-red-900 text-red-100 border-red-800";
+    if (cost >= 8) return "bg-red-700 text-red-100 border-red-600";
+    if (cost >= 6) return "bg-red-500 text-white border-red-400";
+    if (cost >= 5) return "bg-red-300 text-red-900 border-red-200";
+    return "bg-rose-200 text-rose-900 border-rose-300";
   };
 
   return (
@@ -103,14 +106,14 @@ export const CheatMealsPage = () => {
       </div>
 
       {/* Warning if low credits */}
-      {availableCredits < 3 && (
+      {availableCredits < 8 && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
           <div className="flex items-center gap-2 text-red-700">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <p className="font-medium">
-              Low credits! You need to earn more by eating healthy meals.
+              Low credits! You need to earn more by eating healthy meals. Most cheat meals cost 5-10 credits.
             </p>
           </div>
         </div>

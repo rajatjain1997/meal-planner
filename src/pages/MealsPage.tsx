@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { meals } from "../data/meals";
+import { getCompleteMealLibrary } from "../utils/chatMeals";
 import type { Meal, MealType } from "../types";
 import { MealCard } from "../components/MealCard";
 import { MealDetailModal } from "../components/MealDetailModal";
@@ -20,9 +20,17 @@ export const MealsPage = () => {
   const [creditsFilter, setCreditsFilter] = useState<FilterCredits>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
+  const [allMeals, setAllMeals] = useState<Meal[]>(getCompleteMealLibrary);
+
+  // Update meals list when chat meals change
+  useEffect(() => {
+    const updateMeals = () => setAllMeals(getCompleteMealLibrary());
+    window.addEventListener("chatMealsUpdated", updateMeals);
+    return () => window.removeEventListener("chatMealsUpdated", updateMeals);
+  }, []);
 
   const filteredMeals = useMemo(() => {
-    return meals.filter((meal) => {
+    return allMeals.filter((meal) => {
       const matchesType = typeFilter === "all" || meal.type === typeFilter;
       const matchesCredits =
         creditsFilter === "all" || meal.credits === creditsFilter;
@@ -38,7 +46,7 @@ export const MealsPage = () => {
 
       return matchesType && matchesCredits && matchesSearch;
     });
-  }, [typeFilter, creditsFilter, searchQuery]);
+  }, [typeFilter, creditsFilter, searchQuery, allMeals]);
 
   const mealTypes: { value: FilterType; label: string; icon: string }[] = [
     { value: "all", label: "All", icon: "🍽️" },
@@ -153,7 +161,7 @@ export const MealsPage = () => {
 
         {/* Results count */}
         <div className="mt-4 text-sm text-stone-500">
-          Showing {filteredMeals.length} of {meals.length} meals
+          Showing {filteredMeals.length} of {allMeals.length} meals
         </div>
       </div>
 

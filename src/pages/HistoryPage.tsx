@@ -161,54 +161,63 @@ export const HistoryPage = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="max-w-[150px]">
-                        {summary.breakfastMeal ? (
-                          <>
-                            <span className="text-sm text-stone-600 truncate block">
-                              {summary.breakfastMeal.name}
-                            </span>
-                            {log.breakfastTime && (
-                              <span className="text-xs text-stone-400">
-                                {formatMealTime(log.breakfastTime)}
-                              </span>
-                            )}
-                          </>
+                      <div className="max-w-[200px] space-y-1">
+                        {summary.breakfastMeals.length > 0 ? (
+                          summary.breakfastMeals.map((meal, idx) => {
+                            const mealEntry = log.breakfast?.[idx];
+                            return (
+                              <div key={idx} className="text-sm">
+                                <span className="text-stone-600">{meal.name}</span>
+                                {mealEntry && (
+                                  <span className="text-xs text-stone-400 block ml-0">
+                                    {formatMealTime(mealEntry.timestamp)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })
                         ) : (
                           <span className="text-sm text-stone-400">—</span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="max-w-[150px]">
-                        {summary.lunchMeal ? (
-                          <>
-                            <span className="text-sm text-stone-600 truncate block">
-                              {summary.lunchMeal.name}
-                            </span>
-                            {log.lunchTime && (
-                              <span className="text-xs text-stone-400">
-                                {formatMealTime(log.lunchTime)}
-                              </span>
-                            )}
-                          </>
+                      <div className="max-w-[200px] space-y-1">
+                        {summary.lunchMeals.length > 0 ? (
+                          summary.lunchMeals.map((meal, idx) => {
+                            const mealEntry = log.lunch?.[idx];
+                            return (
+                              <div key={idx} className="text-sm">
+                                <span className="text-stone-600">{meal.name}</span>
+                                {mealEntry && (
+                                  <span className="text-xs text-stone-400 block ml-0">
+                                    {formatMealTime(mealEntry.timestamp)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })
                         ) : (
                           <span className="text-sm text-stone-400">—</span>
                         )}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="max-w-[150px]">
-                        {summary.dinnerMeal ? (
-                          <>
-                            <span className="text-sm text-stone-600 truncate block">
-                              {summary.dinnerMeal.name}
-                            </span>
-                            {log.dinnerTime && (
-                              <span className="text-xs text-stone-400">
-                                {formatMealTime(log.dinnerTime)}
-                              </span>
-                            )}
-                          </>
+                      <div className="max-w-[200px] space-y-1">
+                        {summary.dinnerMeals.length > 0 ? (
+                          summary.dinnerMeals.map((meal, idx) => {
+                            const mealEntry = log.dinner?.[idx];
+                            return (
+                              <div key={idx} className="text-sm">
+                                <span className="text-stone-600">{meal.name}</span>
+                                {mealEntry && (
+                                  <span className="text-xs text-stone-400 block ml-0">
+                                    {formatMealTime(mealEntry.timestamp)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })
                         ) : (
                           <span className="text-sm text-stone-400">—</span>
                         )}

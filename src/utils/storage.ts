@@ -1,4 +1,4 @@
-import type { DailyLog } from "../types";
+import type { DailyLog, LoggedMeal } from "../types";
 import { getCurrentTimeString } from "./time";
 
 const STORAGE_KEY = "mealCreditsLogs";
@@ -38,7 +38,9 @@ export const saveDailyLog = (log: DailyLog): void => {
 
 export const getDailyLog = (date: string): DailyLog | undefined => {
   const logs = loadDailyLogs();
-  return logs.find((log) => log.date === date);
+  const log = logs.find((log) => log.date === date);
+  // Migrate legacy format on read
+  return log ? migrateLegacyLog(log) : undefined;
 };
 
 export const getAllDailyLogs = (): DailyLog[] => {
@@ -68,19 +70,61 @@ export const getTodayDateString = (): string => {
   return new Date().toISOString().split("T")[0];
 };
 
+/**
+ * Migrate legacy log format to new format
+ */
+const migrateLegacyLog = (log: DailyLog): DailyLog => {
+  const migrated: DailyLog = { ...log };
+  
+  // Migrate breakfast
+  if (log.breakfastId && !log.breakfast) {
+    migrated.breakfast = [{
+      mealId: log.breakfastId,
+      timestamp: log.breakfastTime || getCurrentTimeString(),
+    }];
+  }
+  
+  // Migrate lunch
+  if (log.lunchId && !log.lunch) {
+    migrated.lunch = [{
+      mealId: log.lunchId,
+      timestamp: log.lunchTime || getCurrentTimeString(),
+    }];
+  }
+  
+  // Migrate dinner
+  if (log.dinnerId && !log.dinner) {
+    migrated.dinner = [{
+      mealId: log.dinnerId,
+      timestamp: log.dinnerTime || getCurrentTimeString(),
+    }];
+  }
+  
+  return migrated;
+};
+
+/**
+ * Log a meal for today at the specified time slot
+ * Appends to the array instead of replacing
+ */
 export const logMealForToday = (
   mealId: string,
   mealType: "breakfast" | "lunch" | "dinner"
 ): void => {
   const today = getTodayDateString();
-  const existingLog = getDailyLog(today) || {
-    date: today,
+  const existingLog = getDailyLog(today);
+  
+  // Migrate legacy format if needed
+  const log = existingLog ? migrateLegacyLog(existingLog) : { date: today };
+  
+  const newMeal: LoggedMeal = {
+    mealId,
+    timestamp: getCurrentTimeString(),
   };
-
+  
   const updatedLog: DailyLog = {
-    ...existingLog,
-    [`${mealType}Id`]: mealId,
-    [`${mealType}Time`]: getCurrentTimeString(),
+    ...log,
+    [mealType]: [...(log[mealType] || []), newMeal],
   };
 
   saveDailyLog(updatedLog);

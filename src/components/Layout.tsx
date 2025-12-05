@@ -6,6 +6,7 @@ import { calculateDailySummary } from "../utils/calculations";
 const navItems = [
   { to: "/meals", label: "Meals" },
   { to: "/plan", label: "Plan Day" },
+  { to: "/chat", label: "💬 Chat" },
   { to: "/cheat", label: "Cheat Meals" },
   { to: "/history", label: "History" },
 ];

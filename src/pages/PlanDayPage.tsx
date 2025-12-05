@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { getMealById } from "../data/meals";
+import { getMealByIdFromLibrary } from "../utils/chatMeals";
 import type { DailyLog, Meal, MealPlanOption } from "../types";
 import { getDailyLog, getTodayDateString } from "../utils/storage";
 import { calculateDailySummary } from "../utils/calculations";
@@ -136,7 +136,7 @@ export const PlanDayPage = () => {
     isPlanned: boolean;
     isCooked: boolean;
   }) => {
-    const meal = getMealById(mealId);
+    const meal = getMealByIdFromLibrary(mealId);
     if (!meal) return null;
 
     const icons = { breakfast: "🌅", lunch: "☀️", dinner: "🌙" };
@@ -280,9 +280,9 @@ export const PlanDayPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             {planOptions.map((option, idx) => {
-              const breakfast = getMealById(option.breakfastId);
-              const lunch = getMealById(option.lunchId);
-              const dinner = getMealById(option.dinnerId);
+              const breakfast = getMealByIdFromLibrary(option.breakfastId);
+              const lunch = getMealByIdFromLibrary(option.lunchId);
+              const dinner = getMealByIdFromLibrary(option.dinnerId);
               const totalCredits =
                 (breakfast?.credits || 0) +
                 (lunch?.credits || 0) +

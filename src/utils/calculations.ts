@@ -1,5 +1,5 @@
 import type { DailyLog, Meal } from "../types";
-import { getMealById } from "../data/meals";
+import { getMealByIdFromLibrary } from "./chatMeals";
 
 export interface DailySummary {
   totalCredits: number;
@@ -8,20 +8,48 @@ export interface DailySummary {
   cheatCreditsUsed: number;
   netCredits: number;
   totalCalories: number;
+  breakfastMeals: Meal[];
+  lunchMeals: Meal[];
+  dinnerMeals: Meal[];
+  // Legacy fields for backward compatibility
   breakfastMeal?: Meal;
   lunchMeal?: Meal;
   dinnerMeal?: Meal;
 }
 
 export const calculateDailySummary = (log: DailyLog): DailySummary => {
-  const breakfastMeal = log.breakfastId ? getMealById(log.breakfastId) : undefined;
-  const lunchMeal = log.lunchId ? getMealById(log.lunchId) : undefined;
-  const dinnerMeal = log.dinnerId ? getMealById(log.dinnerId) : undefined;
+  // Get all meals for each time slot
+  const breakfastMeals = (log.breakfast || []).map(entry => 
+    getMealByIdFromLibrary(entry.mealId)
+  ).filter((meal): meal is Meal => meal !== undefined);
+  
+  const lunchMeals = (log.lunch || []).map(entry => 
+    getMealByIdFromLibrary(entry.mealId)
+  ).filter((meal): meal is Meal => meal !== undefined);
+  
+  const dinnerMeals = (log.dinner || []).map(entry => 
+    getMealByIdFromLibrary(entry.mealId)
+  ).filter((meal): meal is Meal => meal !== undefined);
+  
+  // Legacy support: also check old format
+  if (log.breakfastId && breakfastMeals.length === 0) {
+    const meal = getMealByIdFromLibrary(log.breakfastId);
+    if (meal) breakfastMeals.push(meal);
+  }
+  if (log.lunchId && lunchMeals.length === 0) {
+    const meal = getMealByIdFromLibrary(log.lunchId);
+    if (meal) lunchMeals.push(meal);
+  }
+  if (log.dinnerId && dinnerMeals.length === 0) {
+    const meal = getMealByIdFromLibrary(log.dinnerId);
+    if (meal) dinnerMeals.push(meal);
+  }
 
+  // Calculate totals from all meals
   const mealCredits =
-    (breakfastMeal?.credits || 0) +
-    (lunchMeal?.credits || 0) +
-    (dinnerMeal?.credits || 0);
+    breakfastMeals.reduce((sum, meal) => sum + (meal.credits || 0), 0) +
+    lunchMeals.reduce((sum, meal) => sum + (meal.credits || 0), 0) +
+    dinnerMeals.reduce((sum, meal) => sum + (meal.credits || 0), 0);
 
   const extraCredits = log.extraCredits || 0;
   const cheatCreditsUsed = log.cheatCreditsUsed || 0;
@@ -30,9 +58,9 @@ export const calculateDailySummary = (log: DailyLog): DailySummary => {
   const netCredits = totalCredits - cheatCreditsUsed;
 
   const totalCalories =
-    (breakfastMeal?.calories || 0) +
-    (lunchMeal?.calories || 0) +
-    (dinnerMeal?.calories || 0);
+    breakfastMeals.reduce((sum, meal) => sum + (meal.calories || 0), 0) +
+    lunchMeals.reduce((sum, meal) => sum + (meal.calories || 0), 0) +
+    dinnerMeals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
 
   return {
     totalCredits,
@@ -41,9 +69,13 @@ export const calculateDailySummary = (log: DailyLog): DailySummary => {
     cheatCreditsUsed,
     netCredits,
     totalCalories,
-    breakfastMeal,
-    lunchMeal,
-    dinnerMeal,
+    breakfastMeals,
+    lunchMeals,
+    dinnerMeals,
+    // Legacy fields
+    breakfastMeal: breakfastMeals[0],
+    lunchMeal: lunchMeals[0],
+    dinnerMeal: dinnerMeals[0],
   };
 };
 

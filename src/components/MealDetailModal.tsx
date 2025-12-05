@@ -31,11 +31,13 @@ export const MealDetailModal = ({ meal, onClose, onMealLogged }: MealDetailModal
   const [cooking, setCooking] = useState(false);
   const [cooked, setCooked] = useState(false);
   const currentMealType = getCurrentMealType();
-  const isCurrentMealType = meal.type === currentMealType;
+  // Any meal can be cooked at any time - type doesn't matter
+  const isCurrentMealType = true; // Always show green button since any meal can be cooked
 
   const handleCook = () => {
     setCooking(true);
-    logMealForToday(meal.id, meal.type);
+    // Log based on current time, not meal type
+    logMealForToday(meal.id, currentMealType);
     setCooked(true);
     setCooking(false);
     

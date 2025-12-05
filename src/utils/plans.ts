@@ -1,5 +1,5 @@
 import type { MealPlan, MealPlanOption } from "../types";
-import { getMealsByType } from "../data/meals";
+import { getMealsByTypeIncludingChat } from "./chatMeals";
 
 const STORAGE_KEY = "mealPlans";
 
@@ -7,9 +7,9 @@ const STORAGE_KEY = "mealPlans";
  * Generate 3 random meal plan options
  */
 export const generateMealPlanOptions = (): MealPlanOption[] => {
-  const breakfastMeals = getMealsByType("breakfast");
-  const lunchMeals = getMealsByType("lunch");
-  const dinnerMeals = getMealsByType("dinner");
+  const breakfastMeals = getMealsByTypeIncludingChat("breakfast");
+  const lunchMeals = getMealsByTypeIncludingChat("lunch");
+  const dinnerMeals = getMealsByTypeIncludingChat("dinner");
 
   const options: MealPlanOption[] = [];
 

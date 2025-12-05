@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Icon Generator</title>
+</head>
+<body>
+  <h1>Icon Generator for PWA</h1>
+  <p>Open this file in a browser and use the canvas to generate PNG icons.</p>
+  
+  <canvas id="icon192" width="192" height="192" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+  <canvas id="icon512" width="512" height="512" style="border: 1px solid #ccc; margin: 10px;"></canvas>
+  
+  <br>
+  <button onclick="downloadIcon(192)">Download 192x192 PNG</button>
+  <button onclick="downloadIcon(512)">Download 512x512 PNG</button>
+  
+  <script>
+    function drawIcon(canvas, size) {
+      const ctx = canvas.getContext('2d');
+      
+      // Draw background
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#f97316');
+      gradient.addColorStop(1, '#fb923c');
+      ctx.fillStyle = gradient;
+      ctx.roundRect(0, 0, size, size, size * 0.2);
+      ctx.fill();
+      
+      // Draw emoji (simplified - using text)
+      ctx.fillStyle = 'white';
+      ctx.font = `${size * 0.5}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🍽️', size / 2, size / 2);
+    }
+    
+    function downloadIcon(size) {
+      const canvas = document.getElementById(`icon${size}`);
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `icon-${size}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+    
+    // Draw icons on load
+    window.onload = () => {
+      drawIcon(document.getElementById('icon192'), 192);
+      drawIcon(document.getElementById('icon512'), 512);
+    };
+  </script>
+</body>
+</html>
+
